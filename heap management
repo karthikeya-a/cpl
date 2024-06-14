@@ -1,0 +1,127 @@
+#include<stdio.h>
+#include<stddef.h>
+#include<stdlib.h>
+#define HEAP_SIZE 25000
+
+char heap[HEAP_SIZE];
+void initialize_heap();
+
+void* allocate(size_t size);
+void merge_function();
+void free_storage(void* ptr);
+
+
+struct meta_data
+{
+    struct meta_data* next;
+    size_t length;
+    int free;
+};
+
+
+
+struct meta_data* free_space = (void*)heap;
+void split(struct meta_data* , size_t );
+
+
+void initialize_heap() 
+{
+   
+    free_space->length = HEAP_SIZE - sizeof(struct meta_data);
+    free_space->free = 1;
+    free_space->next = NULL;
+}
+
+void split(struct meta_data *ptr, size_t size) 
+{
+    struct meta_data *new_block = (void *)(((void *)ptr) + size + sizeof(struct meta_data));
+    new_block->next = ptr->next;
+    new_block->length = ptr->length - size - sizeof(struct meta_data);
+    new_block->free = 1;
+    ptr->next = new_block;
+    ptr->length = size;
+}
+
+void* allocate(size_t size) 
+{
+    struct meta_data *ptr = free_space, *best_fit = NULL;
+    void *return_ptr;
+
+    while (ptr != NULL) 
+    {
+        if (ptr->free && ptr->length >= size && (best_fit == NULL || ptr->length < best_fit->length)) 
+        {
+            best_fit = ptr;
+        }
+        ptr = ptr->next;
+    }
+
+    if (best_fit != NULL)
+     {
+        if (best_fit->length == size) 
+        {
+            best_fit->free = 0;
+        } else 
+        {
+            split(best_fit, size);
+        }
+        return_ptr = (void *)(best_fit + 1); // Adjust the pointer to skip metadata
+        printf(" allocation is done  using best-fit\n");
+       
+    } 
+
+    else 
+    {
+        printf("no sufficient storage to allocate\n");
+        return_ptr = NULL;
+    }
+
+    return return_ptr;
+}
+
+void free_storage(void *ptr)
+ {
+    if (((void *)free_space <= ptr) && (ptr <= (void *)(free_space + HEAP_SIZE))) 
+    {
+        struct meta_data *ptr1 = ptr;
+        --ptr1;
+        ptr1->free = 1;
+       
+    } 
+    else 
+    {
+        printf("invalid pointer not in range of heap \n");
+    }
+     merge_function();
+}
+
+void merge_function()
+ {
+    struct meta_data *ptr = free_space;
+
+    while (ptr != NULL && ptr->next != NULL) 
+    {
+        if (ptr->free && ptr->next->free)
+         {
+            ptr->length = ptr->length + ptr->next->length + sizeof(struct meta_data);
+            ptr->next = ptr->next->next;
+           
+         }       
+        ptr = ptr->next;
+    }
+}
+
+int main()
+ {
+  
+  initialize_heap();
+  int *p ;
+  p= (int *)allocate(150 * sizeof(int));
+  int *q = (int *)allocate(200 * sizeof(char));
+  char *r = (char *)allocate(6048 * sizeof(int));
+  free_storage(p);
+  free_storage(q);
+  p = (int *)allocate(150 * sizeof(int));
+
+  return 0;
+}
